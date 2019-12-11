@@ -103,7 +103,7 @@ public class PathFinder<V> {
 
             boolean put(V key, double cost) {
                 Double currentCost=costMap.get(key);
-                if (currentCost==null || currentCost<cost) {
+                if (currentCost==null || cost<currentCost) {
                     costMap.put(key,cost);
                     return true;
                 }
