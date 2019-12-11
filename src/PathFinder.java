@@ -100,24 +100,46 @@ public class PathFinder<V> {
          */
         private class MappingComparator implements Comparator<V> {
             Map<V,Double> costMap=new HashMap<>();
+            Map<V,Double> heuristicCostMap=new HashMap<>();
 
             /**
-             * Accesses the cost mapped to a specified key
+             * Accesses the cost mapped to the specified key (actual+heuristic).
              * @param key The key who's cost should be accessed
-             * @return A Double with the mapped cost, or null if no such mapping exists
+             * @return The stored cost, or infinity if there isn't one
              */
-            Double get(V key) { return costMap.get(key); }
+            double cost(V key) {
+                Double cost=costMap.get(key);
+                Double heuristicCost=heuristicCostMap.get(key);
+                if (cost!=null) return cost+heuristicCost;// cost and heuristicCost can't be assigned separately
+                else return Double.POSITIVE_INFINITY;
+            }
 
             /**
-             * Maps the specified key to the specified cost, but only if the specified cost is lower than the one already present, or the specified key does not have an associated cost
+             * Accesses the actual cost mapped to a specified key.
+             * @param key The key who's actual cost to access
+             * @return The stored cost, or infinity if there isn't one
+             */
+            double actualCost(V key) {
+                Double cost=costMap.get(key);
+                if (cost!=null) return cost;
+                else return Double.POSITIVE_INFINITY;
+            }
+
+            /**
+             * Maps the specified key to the specified costs,
+             * but only if the specified costs are have a lower sum than the ones already present,
+             * or the specified key does not have an associated cost.
              * @param key The key
              * @param cost The new cost
+             * @param heuristicCost The new heuristic cost
              * @return true iff the cost was updated
              */
-            boolean offer(V key, double cost) {
+            boolean offer(V key, double cost, double heuristicCost) {
                 Double currentCost=costMap.get(key);
-                if (currentCost==null || cost<currentCost) {
+                Double currentHeuristicCost=heuristicCostMap.get(key);
+                if (currentCost==null || (cost+heuristicCost)<(currentCost+currentHeuristicCost)) {
                     costMap.put(key,cost);
+                    heuristicCostMap.put(key,heuristicCost);
                     return true;
                 }
                 return false;
@@ -125,23 +147,34 @@ public class PathFinder<V> {
 
             @Override
             public int compare(V o1, V o2) {
-                assert o1!=null && o2!=null;
-                return Double.compare(costMap.get(o1),costMap.get(o2));
+                return Double.compare(cost(o1),cost(o2));
             }
         }
 
         /**
-         * Attempts to insert an element into the queue with a specified cost, with a specified point of attachment
+         * Attempts to insert an element into the queue with a specified cost divided into actual and heuristic,
+         * and into the MST at a specified point of attachment.
          * @param element The element to be inserted
-         * @param cost The cost to insert the element with
+         * @param cost The actual cost to insert the element with
+         * @param heuristicCost The heuristicCost to insert the element with
          * @param tail The element to consider preceding in the spanning tree
          */
-        void offer(V element, double cost, V tail) {
-            if (!comparator.offer(element,cost)) return;
+        void offer(V element, double cost, double heuristicCost, V tail) {
+            if (!comparator.offer(element,cost,heuristicCost)) return;
             assert precedingMap.containsKey(tail) || tail==null;
             precedingMap.put(element,tail);
             priorityQueue.remove(element);
             priorityQueue.offer(element);
+        }
+        /**
+         * Attempts to insert an element into the queue with a specified cost
+         * and into the MST at a specified point of attachment.
+         * @param element The element to be inserted
+         * @param cost The actual cost to insert the element with
+         * @param tail The element to consider preceding in the spanning tree
+         */
+        void offer(V element, double cost, V tail) {
+            offer(element, cost, 0, tail);
         }
 
         /**
@@ -151,15 +184,11 @@ public class PathFinder<V> {
         V poll() { return priorityQueue.poll(); }
 
         /**
-         * The cost the queue associates with the specified element
+         * The cost the queue associates with the specified element.
          * @param element The element who's cost to check
          * @return The stored cost, or infinity if there is none
          */
-        double cost(V element) {
-            Double cost=comparator.get(element);
-            if (cost==null) return Double.POSITIVE_INFINITY;
-            else return cost;
-        }
+        double cost(V element) { return comparator.actualCost(element); }
 
         /**
          * Generates an ordered list of the path stored in the MST from a root node to the specified element
