@@ -243,9 +243,27 @@ public class PathFinder<V> {
 
     public Result<V> searchAstar(V start, V goal) {
         int visitedNodes = 0;
-        /********************
-         * TODO: Task 3
-         ********************/
+        SearchQueue queue=new SearchQueue();
+        queue.offer(start,0,null);
+        Set<V> visited=new HashSet<>();
+        V current;
+        while ((current=queue.poll())!=null) {
+            visitedNodes++;
+            visited.add(current);
+            if (current.equals(goal)) {
+                return new Result<>(true,start,current,queue.cost(current),queue.path(current),visitedNodes);
+            }
+            List<DirectedEdge<V>> outgoing=graph.outgoingEdges(current);
+            for (DirectedEdge<V> edge:outgoing) {
+                V node=edge.to();
+                if (!visited.contains(node)) queue.offer(
+                        node,
+                        edge.weight()+queue.cost(current),
+                        graph.guessCost(node,goal),
+                        current
+                        );
+            }
+        }
         return new Result<>(false, start, null, -1, null, visitedNodes);
     }
 
