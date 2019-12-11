@@ -77,10 +77,12 @@ public class WordLadder implements DirectedGraph<String> {
 
 
     public double guessCost(String v, String w) {
-        /********************
-         * TODO: Task 4
-         ********************/
-        return 0;
+        if (v.length()!=w.length()) return Double.POSITIVE_INFINITY;
+        int cost=0;
+        for (int i=0;i<v.length();i++) {
+            if (v.charAt(i)!=w.charAt(i)) cost++;
+        }
+        return cost;
     }
 
 
