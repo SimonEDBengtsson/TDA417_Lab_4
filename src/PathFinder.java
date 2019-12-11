@@ -99,11 +99,11 @@ public class PathFinder<V> {
                 return costMap.containsKey(key);
             }
 
-            double get(V key) { return costMap.get(key); }
+            Double get(V key) { return costMap.get(key); }
 
             boolean put(V key, double cost) {
                 Double currentCost=costMap.get(key);
-                if (currentCost!=null && currentCost>cost) {
+                if (currentCost==null || currentCost<cost) {
                     costMap.put(key,cost);
                     return true;
                 }
@@ -126,19 +126,19 @@ public class PathFinder<V> {
                 priorityQueue.remove(element);
             }
             if (comparator.put(element,cost)) {
-                precedingMap.put(tail,element);
+                precedingMap.put(element,tail);
             }
             priorityQueue.offer(element);
         }
 
         V poll() {
-            V smallest=priorityQueue.poll();
-            comparator.remove(smallest);
-            return smallest;
+            return priorityQueue.poll();
         }
 
         double cost(V element) {
-            return comparator.get(element);
+            Double cost=comparator.get(element);
+            if (cost==null) return Double.MAX_VALUE;
+            else return cost;
         }
 
         List<V> path(V element) {
@@ -147,12 +147,21 @@ public class PathFinder<V> {
             do {
                 reversePath.add(preceding);
             } while ((preceding=precedingMap.get(preceding))!=null);
-            List<V> path=new ArrayList<>(reversePath.size());
-            int i=reversePath.size();
-            for (V node:reversePath) {
-                path.set(--i,node);
+            return reverse(reversePath);
+        }
+
+        @SuppressWarnings("unchecked")
+        private List<V> reverse(List<V> reverse) {
+            Object[] temp=new Object[reverse.size()];
+            int i=reverse.size();
+            for (V node:reverse) {
+                temp[--i]=node;
             }
-            return path;
+            List<V> list=new ArrayList<>(temp.length);
+            for (Object o:temp) {
+                list.add((V)o);
+            }
+            return list;
         }
     }
 
@@ -162,21 +171,20 @@ public class PathFinder<V> {
         int visitedNodes = 0;
         SearchQueue queue=new SearchQueue();
         queue.offer(start,0,null);
+        Set<V> visited=new HashSet<>();
         V current;
         while ((current=queue.poll())!=null) {
             visitedNodes++;
+            visited.add(current);
             if (current.equals(goal)) {
                 return new Result<>(true,start,current,queue.cost(current),queue.path(current),visitedNodes);
             }
             List<DirectedEdge<V>> outgoing=graph.outgoingEdges(current);
             for (DirectedEdge<V> edge:outgoing) {
-                queue.offer(edge.to(),edge.weight()+queue.cost(current),current);
+                V node=edge.to();
+                if (!visited.contains(node)) queue.offer(node,edge.weight()+queue.cost(current),current);
             }
         }
-
-        /********************
-         * TODO: Task 1
-         ********************/
         return new Result<>(false, start, null, -1, null, visitedNodes);
     }
     
